@@ -26,7 +26,11 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+//app.use(cors({ origin: process.env.CLIENT_URL || '*', credentials: true }));
+app.use(cors({
+  origin: "https://smart-health-wokt.vercel.app",
+  credentials: true
+}));
 app.use(express.json({ limit: '10kb' }));
 
 // Rate limiter for login
