@@ -12,6 +12,7 @@ router.post('/',
     body('issue').trim().notEmpty().withMessage('Issue/reason is required'),
     body('appointment_date').isDate().withMessage('Valid date required'),
     body('appointment_time').matches(/^\d{2}:\d{2}$/).withMessage('Valid time required (HH:MM)'),
+    body('consultation_type').optional().isIn(['in_person', 'telemedicine']).withMessage('Valid consultation type required'),
   ],
   validate, ctrl.createAppointment
 );

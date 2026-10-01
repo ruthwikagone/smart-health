@@ -46,7 +46,7 @@ export default function AdminQueue() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="portal-page">
       <div className="flex items-center justify-between mb-3">
         <h1 className="text-2xl font-bold">Queue Monitor</h1>
         <span className="text-xs text-green-600 bg-green-100 px-3 py-1 rounded-full animate-pulse">Auto-refreshes every 15s</span>

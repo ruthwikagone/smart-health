@@ -42,6 +42,60 @@ function initSocket(io) {
       const room = `queue:${doctor_id || center_id}:${date}`;
       socket.leave(room);
     });
+
+    socket.on('telemedicine:join', ({ appointmentId, user }) => {
+      if (!appointmentId) return;
+      const room = `telemedicine:${appointmentId}`;
+      socket.join(room);
+      socket.data.telemedicineRoom = room;
+      socket.data.telemedicineUser = user || { name: 'Participant', role: 'participant' };
+      socket.to(room).emit('telemedicine:peer-joined', {
+        socketId: socket.id,
+        user: socket.data.telemedicineUser,
+      });
+      io.to(room).emit('telemedicine:system', {
+        text: `${socket.data.telemedicineUser.name || 'Participant'} joined the call.`,
+        at: new Date().toISOString(),
+      });
+    });
+
+    socket.on('telemedicine:chat', ({ appointmentId, message, user }) => {
+      if (!appointmentId || !String(message || '').trim()) return;
+      const payload = {
+        id: `${Date.now()}-${socket.id}`,
+        text: String(message).trim(),
+        user: user || socket.data.telemedicineUser || { name: 'Participant' },
+        at: new Date().toISOString(),
+      };
+      io.to(`telemedicine:${appointmentId}`).emit('telemedicine:chat', payload);
+    });
+
+    socket.on('telemedicine:signal', ({ appointmentId, signal, target }) => {
+      if (!appointmentId || !signal) return;
+      const payload = { from: socket.id, signal };
+      if (target) socket.to(target).emit('telemedicine:signal', payload);
+      else socket.to(`telemedicine:${appointmentId}`).emit('telemedicine:signal', payload);
+    });
+
+    socket.on('telemedicine:end-call', ({ appointmentId, user }) => {
+      if (!appointmentId) return;
+      io.to(`telemedicine:${appointmentId}`).emit('telemedicine:call-ended', {
+        by: user || socket.data.telemedicineUser || { name: 'Participant' },
+        at: new Date().toISOString(),
+      });
+    });
+
+    socket.on('disconnect', () => {
+      const room = socket.data.telemedicineRoom;
+      const user = socket.data.telemedicineUser;
+      if (room) {
+        socket.to(room).emit('telemedicine:peer-left', {
+          socketId: socket.id,
+          user,
+          at: new Date().toISOString(),
+        });
+      }
+    });
   });
 }
 

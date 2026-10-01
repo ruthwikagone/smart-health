@@ -8,6 +8,8 @@ import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import toast from 'react-hot-toast';
 import { useLanguage } from '../context/LanguageContext';
+import HealthAIChatbot from '../components/health/HealthAIChatbot';
+import { downloadReport, fetchPrescriptions, fetchReports, getPrescriptionsForUser, getReportsForUser } from '../services/healthRecords';
 
 const DASHBOARD_COPY = {
   en: {
@@ -246,6 +248,10 @@ export default function Dashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('upcoming');
+  const [showAi, setShowAi] = useState(false);
+  const [aiContext, setAiContext] = useState(null);
+  const [reports, setReports] = useState(getReportsForUser(user));
+  const [prescriptions, setPrescriptions] = useState(getPrescriptionsForUser(user));
   const t = DASHBOARD_COPY[language] || DASHBOARD_COPY.en;
 
   const fetchAppointments = async () => {
@@ -266,6 +272,8 @@ export default function Dashboard() {
       return;
     }
     fetchAppointments();
+    fetchReports().then(setReports).catch(() => setReports(getReportsForUser(user)));
+    fetchPrescriptions().then(setPrescriptions).catch(() => setPrescriptions(getPrescriptionsForUser(user)));
   }, [user]);
 
   const handleCancel = async (id) => {
@@ -320,7 +328,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="portal-page">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -344,6 +352,9 @@ export default function Dashboard() {
               ))}
             </select>
           </div>
+          <button type="button" onClick={() => setShowAi((value) => !value)} className="btn-secondary flex items-center gap-2">
+            Ask Health AI
+          </button>
           <Link to="/centers" className="btn-primary flex items-center gap-2">
             + {t.bookAppointment}
           </Link>
@@ -405,6 +416,66 @@ export default function Dashboard() {
             <p className="text-xs text-gray-500 mt-1">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-6 mb-8 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.8fr)]">
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              { to: '/health-reports', title: 'Health Reports', count: reports.length, text: 'Upload and manage lab reports.' },
+              { to: '/digital-health-records', title: 'Digital Health Records', count: reports.length + prescriptions.length + appointments.length, text: 'Profile, history, and timeline.' },
+              { to: '/prescriptions', title: 'E-Prescriptions', count: prescriptions.length, text: 'Download, print, or ask AI.' },
+              { to: '/telemedicine', title: 'Telemedicine', count: upcoming.length, text: 'Join video consultation rooms.' },
+            ].map((item) => (
+              <Link key={item.to} to={item.to} className="card block transition-shadow hover:shadow-md">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="font-semibold">{item.title}</h2>
+                  <span className="badge bg-blue-100 text-blue-700">{item.count}</span>
+                </div>
+                <p className="mt-2 min-h-10 text-sm text-gray-500">{item.text}</p>
+                <p className="mt-4 text-sm font-semibold text-blue-600">Open</p>
+              </Link>
+            ))}
+          </div>
+
+          <div className="card">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-semibold">Recent Health Reports</h2>
+              <Link to="/health-reports" className="text-sm font-medium text-blue-600">View all</Link>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {reports.slice(0, 4).map((report) => (
+                <div key={report.id} className="rounded-lg border border-gray-100 p-4 dark:border-gray-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{report.name}</p>
+                      <p className="text-sm text-gray-500">{report.type} - {report.date}</p>
+                      <p className="text-xs text-gray-400">{report.doctor} / {report.hospital}</p>
+                    </div>
+                    <span className="badge bg-green-100 text-green-700">{report.status}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button className="btn-secondary px-3 py-1.5 text-xs" onClick={() => downloadReport(report)}>Download</button>
+                    <button className="btn-primary px-3 py-1.5 text-xs" onClick={() => { setAiContext({ ...report, kind: 'report' }); setShowAi(true); }}>Ask AI About This Report</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {showAi ? (
+          <HealthAIChatbot context={aiContext} onClearContext={() => setAiContext(null)} />
+        ) : (
+          <div className="card">
+            <h2 className="font-semibold">AI Health Assistant</h2>
+            <p className="mt-2 text-sm text-gray-500">Ask about prescriptions, medicine wording, uploaded reports, lab terms, or appointment instructions.</p>
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Educational only. It does not diagnose disease or replace professional medical advice.
+            </p>
+            <button className="btn-primary mt-4 w-full" onClick={() => setShowAi(true)}>Ask Health AI</button>
+          </div>
+        )}
       </div>
 
       {/* Notifications Panel */}

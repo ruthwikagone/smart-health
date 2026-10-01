@@ -92,7 +92,7 @@ export default function AdminUsers() {
 
   if (!isMainAdmin(me)) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="portal-page">
         <div className="card text-center">
           <h1 className="text-2xl font-bold mb-2">Main Admin Only</h1>
           <p className="text-gray-500">Hospital admins cannot create admins or change user access.</p>
@@ -110,7 +110,7 @@ export default function AdminUsers() {
   const regularUsers = users.filter((u) => u.role === 'user');
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="portal-page">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">User Management</h1>

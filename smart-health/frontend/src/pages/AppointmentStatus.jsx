@@ -7,6 +7,7 @@ import { buildMapsLink, formatDate, formatDoctorName, formatTime, parseAppointme
 import Spinner from '../components/ui/Spinner';
 import toast from 'react-hot-toast';
 import CallButton from '../components/ui/CallButton';
+import { downloadReport, fetchAppointmentRecords, getAppointmentAttachments, getConsultationType, getPrescriptions, getReports } from '../services/healthRecords';
 
 function getAppointmentTiming(appt) {
   if (!appt) return null;
@@ -40,6 +41,7 @@ export default function AppointmentStatus() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [appt, setAppt] = useState(null);
+  const [records, setRecords] = useState({ reports: [], prescriptions: [] });
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(new Date());
   const timerRef = useRef(null);
@@ -55,6 +57,7 @@ export default function AppointmentStatus() {
 
   useEffect(() => {
     fetchAppt();
+    fetchAppointmentRecords(id).then(setRecords).catch(() => {});
     // Refresh appointment every 30 seconds
     const interval = setInterval(fetchAppt, 30000);
     // Update clock every minute
@@ -81,12 +84,18 @@ export default function AppointmentStatus() {
   const avgMin = appt.average_consultation_minutes || 15;
   const estimatedWait = activeQueue * avgMin;
   const issue = parseAppointmentIssue(appt.issue);
+  const attachments = getAppointmentAttachments(appt.id);
+  const localReports = getReports().filter((report) => attachments.reports.includes(report.id));
+  const localPrescriptions = getPrescriptions().filter((prescription) => attachments.prescriptions.includes(prescription.id));
+  const attachedReports = records.reports.length ? records.reports : localReports;
+  const attachedPrescriptions = records.prescriptions.length ? records.prescriptions : localPrescriptions;
+  const isTelemedicine = getConsultationType(appt) === 'telemedicine';
 
   const apptDateStr = String(appt.appointment_date).split('T')[0];
   const timeStr = String(appt.appointment_time).slice(0, 5);
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="portal-page">
       <button onClick={() => navigate('/dashboard')} className="text-sm text-blue-600 hover:underline mb-6 flex items-center gap-1">
         ← Back to Dashboard
       </button>
@@ -218,6 +227,46 @@ export default function AppointmentStatus() {
           </p>
         </div>
       )}
+
+      {/* Map / Directions */}
+      {(attachedReports.length > 0 || attachedPrescriptions.length > 0) && (
+        <div className="card mb-5">
+          <h2 className="mb-4 font-semibold">Attached Medical Information</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="mb-2 text-sm font-medium">Reports</p>
+              {attachedReports.length ? attachedReports.map((report) => (
+                <div key={report.id} className="mb-2 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+                  <p className="font-medium">{report.name}</p>
+                  <p className="text-xs text-gray-500">{report.type} - {report.date}</p>
+                  <button className="mt-2 text-xs font-semibold text-blue-600" onClick={() => downloadReport(report)}>Download Report</button>
+                </div>
+              )) : <p className="text-sm text-gray-500">No reports attached.</p>}
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium">Prescriptions</p>
+              {attachedPrescriptions.length ? attachedPrescriptions.map((prescription) => (
+                <div key={prescription.id} className="mb-2 rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-800">
+                  <p className="font-medium">{prescription.diagnosis}</p>
+                  <p className="text-xs text-gray-500">{prescription.doctorName} - {prescription.date}</p>
+                </div>
+              )) : <p className="text-sm text-gray-500">No prescriptions attached.</p>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="card mb-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium text-sm">Video Consultation</p>
+            <p className="text-xs text-gray-500">
+              {isTelemedicine ? 'Your online consultation room is available from Telemedicine.' : 'This appointment is booked as a hospital visit. Reschedule as Telemedicine for a video room.'}
+            </p>
+          </div>
+          <button onClick={() => navigate('/telemedicine')} disabled={!isTelemedicine} className="btn-primary text-sm">Join Video Consultation</button>
+        </div>
+      </div>
 
       {/* Map / Directions */}
       <div className="card mb-5">

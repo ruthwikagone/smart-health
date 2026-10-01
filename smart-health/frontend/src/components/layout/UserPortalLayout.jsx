@@ -8,9 +8,15 @@ export default function UserPortalLayout({ children }) {
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard' },
-    { to: '/history', label: 'History' },
-    { to: '/profile', label: 'Profile' },
+    { to: '/history', label: 'Appointments' },
     { to: '/centers', label: 'Find Centers' },
+    { to: '/health-reports', label: 'Health Reports' },
+    { to: '/digital-health-records', label: 'Digital Health Records' },
+    { to: '/prescriptions', label: 'E-Prescriptions' },
+    { to: '/telemedicine', label: 'Telemedicine' },
+    { to: '/ai-assistant', label: 'AI Health Assistant' },
+    { to: '/feedback', label: 'Feedback' },
+    { to: '/profile', label: 'Profile' },
   ];
 
   const handleLogout = () => {
@@ -21,7 +27,7 @@ export default function UserPortalLayout({ children }) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen">
-        <aside className="hidden lg:flex w-72 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <aside className="hidden lg:flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
           <div className="px-6 py-6 border-b border-slate-200 dark:border-slate-800">
             <Link to="/dashboard" className="text-xl font-bold text-sky-600">SmartHealth</Link>
             <p className="mt-2 text-xs uppercase tracking-[0.25em] text-slate-400">User Portal</p>
@@ -53,7 +59,7 @@ export default function UserPortalLayout({ children }) {
           </div>
         </aside>
 
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <header className="border-b border-slate-200 bg-white/90 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90 lg:px-8">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -68,7 +74,7 @@ export default function UserPortalLayout({ children }) {
             </div>
           </header>
 
-          <main>{children}</main>
+          <main className="min-w-0">{children}</main>
         </div>
       </div>
     </div>

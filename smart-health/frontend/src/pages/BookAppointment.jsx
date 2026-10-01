@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { COMMON_SYMPTOMS, getErrorMessage, formatDoctorName, formatTime, serializeAppointmentIssue, buildMapsLink } from '../utils/helpers';
 import Spinner from '../components/ui/Spinner';
 import { useLocation } from '../context/LocationContext';
+import { getPrescriptions, getReports, saveAppointmentAttachments } from '../services/healthRecords';
 
 const STEPS = ['Reason', 'Doctor', 'Date & Time', 'Confirm'];
 
@@ -34,8 +35,10 @@ export default function BookAppointment() {
   const [loadingNearby, setLoadingNearby] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedReports, setSelectedReports] = useState([]);
+  const [selectedPrescriptions, setSelectedPrescriptions] = useState([]);
   const [form, setForm] = useState({
-    doctor_id: '', issue: '', symptoms: [], notes: '', appointment_date: '', appointment_time: '', priority: 'normal',
+    doctor_id: '', issue: '', symptoms: [], notes: '', appointment_date: '', appointment_time: '', priority: 'normal', consultationType: 'in_person',
   });
 
   useEffect(() => {
@@ -86,11 +89,17 @@ export default function BookAppointment() {
         appointment_date: form.appointment_date,
         appointment_time: form.appointment_time,
         priority: form.priority,
+        consultation_type: form.consultationType,
         issue: serializeAppointmentIssue({
           reason: form.issue || 'General consultation',
           symptoms: form.symptoms,
-          notes: form.notes,
+          notes: `${form.notes}\nConsultation Type: ${form.consultationType === 'telemedicine' ? 'Telemedicine' : 'In-person'}`.trim(),
         }),
+      });
+      saveAppointmentAttachments(res.data.appointment.id, {
+        reports: selectedReports,
+        prescriptions: selectedPrescriptions,
+        consultationType: form.consultationType,
       });
       toast.success('Appointment booked successfully!');
       navigate(`/appointments/${res.data.appointment.id}`);
@@ -105,6 +114,8 @@ export default function BookAppointment() {
 
   const grouped = groupSlotsByPeriod(slots);
   const selectedDoctor = doctors.find(d => d.id === form.doctor_id);
+  const availableReports = getReports();
+  const availablePrescriptions = getPrescriptions();
   const availableCount = slots.filter(s => s.available).length;
   const currentCenterIsEmergencyReady = center?.sector === 'hospital';
   const canContinueFromStepZero = Boolean(form.issue.trim() || form.symptoms.length || form.notes.trim());
@@ -114,7 +125,7 @@ export default function BookAppointment() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="portal-page">
       <button onClick={() => navigate(`/centers/${centerId}`)} className="text-sm text-blue-600 hover:underline mb-4 flex items-center gap-1">
         ← Back to Center
       </button>
@@ -215,6 +226,27 @@ export default function BookAppointment() {
                 ))}
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Consultation Type</label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  { value: 'in_person', label: 'Visit Hospital', desc: 'Come to the hospital and track the live queue.' },
+                  { value: 'telemedicine', label: 'Telemedicine', desc: 'Book an online video consultation room.' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, consultationType: option.value })}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      form.consultationType === option.value ? 'border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-100' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">{option.label}</p>
+                    <p className="mt-1 text-xs text-gray-500">{option.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
             {form.priority === 'emergency' && (
               <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/10 p-4 space-y-3">
                 <div>
@@ -286,6 +318,42 @@ export default function BookAppointment() {
                 ) : null}
               </div>
             )}
+            <div className="rounded-xl border border-gray-100 p-4 dark:border-gray-800">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-sm">Attach Medical Reports</p>
+                  <p className="text-xs text-gray-500">Select existing reports or upload a new one from Health Reports.</p>
+                </div>
+                <button type="button" onClick={() => navigate('/health-reports')} className="btn-secondary px-3 py-2 text-xs">+ Add Report</button>
+              </div>
+              <div className="space-y-2">
+                {availableReports.slice(0, 4).map((report) => (
+                  <label key={report.id} className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800">
+                    <span>{report.name} - {report.date}.{String(report.fileType || '').toLowerCase()}</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedReports.includes(report.id)}
+                      onChange={(event) => setSelectedReports((current) => event.target.checked ? [...current, report.id] : current.filter((reportId) => reportId !== report.id))}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border border-gray-100 p-4 dark:border-gray-800">
+              <p className="mb-3 font-semibold text-sm">Attach Prescription</p>
+              <div className="space-y-2">
+                {availablePrescriptions.slice(0, 3).map((prescription) => (
+                  <label key={prescription.id} className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800">
+                    <span>{prescription.diagnosis} - {prescription.date}</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedPrescriptions.includes(prescription.id)}
+                      onChange={(event) => setSelectedPrescriptions((current) => event.target.checked ? [...current, prescription.id] : current.filter((prescriptionId) => prescriptionId !== prescription.id))}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
             <button className="btn-primary w-full" disabled={!canContinueFromStepZero || (form.priority === 'emergency' && !currentCenterIsEmergencyReady)} onClick={() => setStep(1)}>
               Continue →
             </button>
@@ -451,9 +519,12 @@ export default function BookAppointment() {
                 { label: '📅 Date', value: (() => { const [y,m,d] = form.appointment_date.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); })() },
                 { label: '🕐 Time', value: formatTime(form.appointment_time) },
                 { label: '🚨 Priority', value: form.priority.charAt(0).toUpperCase() + form.priority.slice(1) },
+                { label: 'Consultation', value: form.consultationType === 'telemedicine' ? 'Telemedicine' : 'Hospital visit' },
                 { label: '📋 Reason', value: form.issue },
                 { label: '🩺 Symptoms', value: form.symptoms.length ? form.symptoms.join(', ') : 'Not specified' },
                 { label: '📝 Notes', value: form.notes || 'None' },
+                { label: 'Attached reports', value: selectedReports.length ? `${selectedReports.length} selected` : 'None' },
+                { label: 'Attached prescriptions', value: selectedPrescriptions.length ? `${selectedPrescriptions.length} selected` : 'None' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between gap-4">
                   <span className="text-gray-500 shrink-0">{label}</span>

@@ -6,6 +6,7 @@ const adminMailService = require('../services/adminMailService');
 const notifService = require('../services/notificationService');
 const { calculateQueue, getPriorityRank, recalculateQueueState } = require('../utils/queueUtils');
 const { getAdminNotificationRecipients } = require('../utils/adminAccess');
+const { ensureFeatureSchema } = require('../services/featureSchema');
 
 async function notifyPriorityDelayImpacts(io, triggerAppt, previousById, updatedAppointments) {
   const delayedAppointments = updatedAppointments.filter((appt) => {
@@ -39,7 +40,9 @@ async function notifyPriorityDelayImpacts(io, triggerAppt, previousById, updated
 }
 
 exports.createAppointment = asyncHandler(async (req, res) => {
+  await ensureFeatureSchema();
   const { center_id, doctor_id, issue, appointment_date, appointment_time, priority } = req.body;
+  const consultationType = req.body.consultation_type === 'telemedicine' ? 'telemedicine' : 'in_person';
   const user_id = req.user.id;
 
   const apptDateTime = new Date(`${appointment_date}T${appointment_time}`);
@@ -72,8 +75,8 @@ exports.createAppointment = asyncHandler(async (req, res) => {
   await db.query(
     `INSERT INTO appointments
      (id, user_id, center_id, doctor_id, issue, appointment_date, appointment_time,
-      queue_number, patients_before, estimated_wait_minutes, status, priority)
-     VALUES (?,?,?,?,?,?,?,?,?,?,'confirmed',?)`,
+      queue_number, patients_before, estimated_wait_minutes, status, priority, consultation_type, telemedicine_status, telemedicine_room_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,'confirmed',?,?,?,?)`,
     [
       id,
       user_id,
@@ -86,6 +89,9 @@ exports.createAppointment = asyncHandler(async (req, res) => {
       patients_before,
       estimated_wait_minutes,
       priority || 'normal',
+      consultationType,
+      consultationType === 'telemedicine' ? 'requested' : 'not_requested',
+      consultationType === 'telemedicine' ? `smarthealth-${id}` : null,
     ]
   );
 

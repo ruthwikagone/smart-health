@@ -89,6 +89,12 @@ CREATE TABLE IF NOT EXISTS appointments (
   estimated_wait_minutes INT DEFAULT 0,
   status ENUM('confirmed','in_progress','completed','cancelled','no_show') DEFAULT 'confirmed',
   priority ENUM('normal','urgent','emergency') DEFAULT 'normal',
+  consultation_type VARCHAR(20) NOT NULL DEFAULT 'in_person',
+  telemedicine_status VARCHAR(20) NOT NULL DEFAULT 'not_requested',
+  telemedicine_room_id VARCHAR(100),
+  telemedicine_enabled_at DATETIME,
+  follow_up_date DATE,
+  follow_up_note TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -100,6 +106,8 @@ CREATE TABLE IF NOT EXISTS reviews (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   user_id VARCHAR(36) NOT NULL,
   center_id VARCHAR(36) NOT NULL,
+  doctor_id VARCHAR(36),
+  appointment_id VARCHAR(36),
   rating TINYINT CHECK (rating BETWEEN 1 AND 5),
   comment TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -107,7 +115,93 @@ CREATE TABLE IF NOT EXISTS reviews (
   FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS appointment_notes (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  appointment_id VARCHAR(36) NOT NULL,
+  author_id VARCHAR(36) NOT NULL,
+  note TEXT NOT NULL,
+  visible_to_patient TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS feedback (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  user_id VARCHAR(36) NOT NULL,
+  center_id VARCHAR(36),
+  appointment_id VARCHAR(36),
+  category VARCHAR(60) NOT NULL DEFAULT 'General',
+  rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  subject VARCHAR(160) NOT NULL,
+  message TEXT NOT NULL,
+  status ENUM('new','in_review','resolved') NOT NULL DEFAULT 'new',
+  admin_response TEXT,
+  responded_by VARCHAR(36),
+  responded_at DATETIME,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (center_id) REFERENCES centers(id) ON DELETE SET NULL,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL,
+  FOREIGN KEY (responded_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS medical_reports (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  patient_id VARCHAR(36) NOT NULL,
+  appointment_id VARCHAR(36),
+  name VARCHAR(180) NOT NULL,
+  type VARCHAR(80) NOT NULL,
+  hospital VARCHAR(180),
+  doctor VARCHAR(120),
+  report_date DATE NOT NULL,
+  description TEXT,
+  findings TEXT,
+  recommendation TEXT,
+  file_name VARCHAR(220),
+  file_type VARCHAR(40),
+  file_size INT DEFAULT 0,
+  status VARCHAR(60) DEFAULT 'Uploaded',
+  content LONGTEXT NOT NULL,
+  created_by VARCHAR(36),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS prescriptions (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  patient_id VARCHAR(36) NOT NULL,
+  appointment_id VARCHAR(36),
+  doctor_name VARCHAR(120),
+  patient_name VARCHAR(120),
+  prescription_date DATE NOT NULL,
+  diagnosis TEXT NOT NULL,
+  medicines JSON NOT NULL,
+  notes TEXT,
+  content LONGTEXT NOT NULL,
+  created_by VARCHAR(36),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (patient_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS appointment_record_links (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  appointment_id VARCHAR(36) NOT NULL,
+  record_type ENUM('report','prescription') NOT NULL,
+  record_id VARCHAR(36) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_appointment_record (appointment_id, record_type, record_id),
+  FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE
+);
+
 CREATE INDEX idx_appointments_user ON appointments(user_id);
 CREATE INDEX idx_appointments_center_date ON appointments(center_id, appointment_date);
 CREATE INDEX idx_appointments_doctor_date ON appointments(doctor_id, appointment_date);
 CREATE INDEX idx_doctors_center ON doctors(center_id);
+CREATE INDEX idx_medical_reports_patient ON medical_reports(patient_id);
+CREATE INDEX idx_prescriptions_patient ON prescriptions(patient_id);
+CREATE INDEX idx_feedback_user ON feedback(user_id);
+CREATE INDEX idx_feedback_center ON feedback(center_id);

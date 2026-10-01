@@ -22,6 +22,12 @@ import BookAppointment from './pages/BookAppointment';
 import AppointmentStatus from './pages/AppointmentStatus';
 import Profile from './pages/Profile';
 import MedicalHistory from './pages/MedicalHistory';
+import HealthReports from './pages/HealthReports';
+import DigitalHealthRecords from './pages/DigitalHealthRecords';
+import Prescriptions from './pages/Prescriptions';
+import Telemedicine from './pages/Telemedicine';
+import AIHealthAssistant from './pages/AIHealthAssistant';
+import Feedback from './pages/Feedback';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCenters from './pages/admin/AdminCenters';
@@ -32,6 +38,8 @@ import AdminQueue from './pages/admin/AdminQueue';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminHospitalControl from './pages/admin/AdminHospitalControl';
 import AdminSystemControl from './pages/admin/AdminSystemControl';
+import AdminTelemedicine from './pages/admin/AdminTelemedicine';
+import AdminFeedback from './pages/admin/AdminFeedback';
 
 export default function App() {
   const location = useLocation();
@@ -41,6 +49,13 @@ export default function App() {
     || location.pathname === '/dashboard'
     || location.pathname === '/profile'
     || location.pathname === '/history'
+    || location.pathname === '/health-reports'
+    || location.pathname === '/digital-health-records'
+    || location.pathname === '/prescriptions'
+    || location.pathname === '/telemedicine'
+    || location.pathname === '/ai-assistant'
+    || location.pathname === '/feedback'
+    || (location.pathname.startsWith('/centers/') && location.pathname.endsWith('/book'))
     || location.pathname.startsWith('/appointments/');
 
   return (
@@ -67,7 +82,13 @@ export default function App() {
                   <Route path="/dashboard" element={<ProtectedRoute role="user"><UserPortalLayout><Dashboard /></UserPortalLayout></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute role="user"><UserPortalLayout><Profile /></UserPortalLayout></ProtectedRoute>} />
                   <Route path="/history" element={<ProtectedRoute role="user"><UserPortalLayout><MedicalHistory /></UserPortalLayout></ProtectedRoute>} />
-                  <Route path="/centers/:centerId/book" element={<ProtectedRoute><BookAppointment /></ProtectedRoute>} />
+                  <Route path="/health-reports" element={<ProtectedRoute role="user"><UserPortalLayout><HealthReports /></UserPortalLayout></ProtectedRoute>} />
+                  <Route path="/digital-health-records" element={<ProtectedRoute role="user"><UserPortalLayout><DigitalHealthRecords /></UserPortalLayout></ProtectedRoute>} />
+                  <Route path="/prescriptions" element={<ProtectedRoute role="user"><UserPortalLayout><Prescriptions /></UserPortalLayout></ProtectedRoute>} />
+                  <Route path="/telemedicine" element={<ProtectedRoute role="user"><UserPortalLayout><Telemedicine /></UserPortalLayout></ProtectedRoute>} />
+                  <Route path="/ai-assistant" element={<ProtectedRoute role="user"><UserPortalLayout><AIHealthAssistant /></UserPortalLayout></ProtectedRoute>} />
+                  <Route path="/feedback" element={<ProtectedRoute role="user"><UserPortalLayout><Feedback /></UserPortalLayout></ProtectedRoute>} />
+                  <Route path="/centers/:centerId/book" element={<ProtectedRoute role="user"><UserPortalLayout><BookAppointment /></UserPortalLayout></ProtectedRoute>} />
                   <Route path="/appointments/:id" element={<ProtectedRoute role="user"><UserPortalLayout><AppointmentStatus /></UserPortalLayout></ProtectedRoute>} />
 
                   {/* Protected - Hospital Admin */}
@@ -77,6 +98,8 @@ export default function App() {
                   <Route path="/hospital-admin/doctors" element={<ProtectedRoute role="hospital_admin"><AdminPortalLayout portal="hospital"><AdminDoctors /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/hospital-admin/ambulances" element={<ProtectedRoute role="hospital_admin"><AdminPortalLayout portal="hospital"><AdminAmbulances /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/hospital-admin/appointments" element={<ProtectedRoute role="hospital_admin"><AdminPortalLayout portal="hospital"><AdminAppointments /></AdminPortalLayout></ProtectedRoute>} />
+                  <Route path="/hospital-admin/telemedicine/:id" element={<ProtectedRoute role="hospital_admin"><AdminPortalLayout portal="hospital"><AdminTelemedicine /></AdminPortalLayout></ProtectedRoute>} />
+                  <Route path="/hospital-admin/feedback" element={<ProtectedRoute role="hospital_admin"><AdminPortalLayout portal="hospital"><AdminFeedback /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/hospital-admin/queue" element={<ProtectedRoute role="hospital_admin"><AdminPortalLayout portal="hospital"><AdminQueue /></AdminPortalLayout></ProtectedRoute>} />
 
                   {/* Protected - Main Admin */}
@@ -88,6 +111,8 @@ export default function App() {
                   <Route path="/main-admin/doctors" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminDoctors /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/main-admin/ambulances" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminAmbulances /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/main-admin/appointments" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminAppointments /></AdminPortalLayout></ProtectedRoute>} />
+                  <Route path="/main-admin/telemedicine/:id" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminTelemedicine /></AdminPortalLayout></ProtectedRoute>} />
+                  <Route path="/main-admin/feedback" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminFeedback /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/main-admin/queue" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminQueue /></AdminPortalLayout></ProtectedRoute>} />
                   <Route path="/main-admin/users" element={<ProtectedRoute role="main_admin"><AdminPortalLayout portal="main"><AdminUsers /></AdminPortalLayout></ProtectedRoute>} />
 
